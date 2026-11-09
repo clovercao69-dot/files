@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>活动预算计算器</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%231D5C4D'/%3E%3Cpath d='M4 10.5V6.6M6.7 10.5V4.5M9.4 10.5V7.8M12 10.5V5.6' stroke='white' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --ink:#1B1A17; --ink2:#4E4B45; --ink3:#8C877E;
+  --line:#E2DED6; --line2:#EFECE6; --bg:#F7F6F3; --card:#fff; --soft:#FBFAF7;
+  --brand:#1D5C4D; --brand-soft:#EAF1EE;
+  --over:#B4402C; --over-soft:#FAEDEA;
+  --save:#3B7A57; --save-soft:#EDF4EF;
+  --warn:#A9761B; --warn-soft:#FBF3E3;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,"Roboto Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;
+  font-size:13px; line-height:1.5; color:var(--ink); background:var(--bg);
+  overflow:hidden; -webkit-font-smoothing:antialiased;
+}
+input,select,button{font-family:inherit;font-size:inherit;color:inherit;}
+input[type=date]{font-family:inherit;}
+button{cursor:pointer;background:none;border:none;}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:#D8D3C9;border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:#C4BEB2;}
+::-webkit-scrollbar-track{background:transparent;}
+
+.app{height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ============ 顶栏 ============ */
+header{
+  height:54px;flex:none;display:flex;align-items:center;gap:10px;
+  padding:0 18px;background:var(--card);border-bottom:1px solid var(--line);
+  position:relative;z-index:30;
+}
+.brand{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;letter-spacing:.02em;color:var(--brand);margin-right:6px;white-space:nowrap;}
+.brand svg{display:block;}
+.hdiv{width:1px;height:20px;background:var(--line);flex:none;}
+
+.hname{
+  border:1px solid transparent;border-radius:4px;padding:4px 7px;font-size:13.5px;font-weight:600;
+  width:180px;background:transparent;outline:none;
+}
+.hname:hover{border-color:var(--line);}
+.hname:focus{border-color:var(--brand);background:#fff;}
+
+.hdate{
+  border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink2);
+  width:122px;background:transparent;outline:none;font-family:var(--mono);
+}
+.hdate:hover{border-color:var(--line);}
+.hdate:focus{border-color:var(--brand);background:#fff;}
+
+/* 人数步进器 */
+.stepper{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:4px;background:#fff;overflow:hidden;}
+.stepper .lbl{font-size:11px;color:var(--ink3);padding:0 7px 0 9px;letter-spacing:.04em;}
+.step-btn{
+  width:24px;height:28px;display:grid;place-items:center;color:var(--ink2);
+  font-size:14px;line-height:1;transition:background .12s;
+}
+.step-btn:hover:not(:disabled){background:var(--brand-soft);color:var(--brand);}
+.step-btn:disabled{color:#C9C4BA;cursor:default;}
+.hnum{
+  width:46px;height:28px;text-align:center;border:none;border-left:1px solid var(--line2);border-right:1px solid var(--line2);
+  font-family:var(--mono);font-size:13px;font-weight:600;outline:none;background:#fff;font-variant-numeric:tabular-nums;
+}
+.hnum:focus{background:var(--brand-soft);}
+.stepper .unit{font-size:11px;color:var(--ink3);padding:0 8px 0 6px;}
+
+.hright{margin-left:auto;display:flex;align-items:center;gap:7px;}
+.btn{
+  height:28px;padding:0 11px;border:1px solid var(--line);border-radius:4px;background:#fff;
+  font-size:12px;color:var(--ink2);display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+  transition:border-color .12s,color .12s,background .12s;
+}
+.btn:hover{border-color:#C9C3B8;color:var(--ink);}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:500;}
+.btn.pri:hover{background:#17493d;border-color:#17493d;color:#fff;}
+.btn.ghost{border-color:transparent;color:var(--ink3);}
+.btn.ghost:hover{background:#F1EFEA;color:var(--ink2);}
+.btn[disabled]{opacity:.4;cursor:default;}
+
+/* 下拉 */
+.dd-wrap{position:relative;}
+.dd{
+  position:absolute;top:calc(100% + 6px);right:0;min-width:196px;background:#fff;
+  border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 20px rgba(27,26,23,.09);
+  padding:5px;z-index:100;display:none;
+}
+.dd.open{display:block;}
+.dd .it{
+  display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;font-size:12.5px;
+  color:var(--ink2);cursor:pointer;
+}
+.dd .it:hover{background:var(--soft);color:var(--ink);}
+.dd .it .k{font-size:11px;color:var(--ink3);margin-left:auto;font-family:var(--mono);}
+.dd .sep{height:1px;background:var(--line2);margin:4px 2px;}
+.dd .lbl{font-size:10.5px;color:var(--ink3);letter-spacing:.08em;padding:6px 9px 3px;}
+
+/* ============ 主体 ============ */
+main{flex:1;min-height:0;display:grid;grid-template-columns:1fr 500px;overflow:hidden;}
+
+/* 左：科目表 */
+.left{display:flex;flex-direction:column;min-height:0;min-width:0;padding:13px 18px 0 18px;}
+.thead{
+  display:grid;grid-template-columns:4px minmax(150px,1fr) 112px 110px 64px 110px 72px 26px;
+  gap:10px;align-items:center;padding:0 8px 7px 0;flex:none;;
+  font-size:10.5px;color:var(--ink3);letter-spacing:.06em;border-bottom:1px solid var(--line);
+}
+.thead .r{text-align:right;}
+.tbody{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:4px;;width:100%;}
+.tbody::-webkit-scrollbar{width:6px;}
+
+.row{
+  display:grid;grid-template-columns:4px minmax(150px,1fr) 112px 110px 64px 110px 72px 26px;
+  gap:10px;align-items:center;height:42px;padding:0 4px 0 0;border-bottom:1px solid var(--line2);
+  position:relative;transition:background .1s;
+}
+.row:hover{background:var(--soft);}
+.row .bar{width:4px;height:18px;border-radius:2px;align-self:center;}
+.row .c-name{
+  border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12.5px;width:100%;
+  background:transparent;outline:none;min-width:0;text-overflow:ellipsis;
+}
+.row .c-name:hover{border-color:var(--line2);}
+.row .c-name:focus{border-color:var(--brand);background:#fff;}
+.sel{
+  width:100%;height:26px;border:1px solid var(--line);border-radius:4px;background:#fff;
+  font-size:11.5px;color:var(--ink2);padding:0 18px 0 6px;outline:none;cursor:pointer;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'><path d='M1 1l3 3 3-3' stroke='%238C877E' stroke-width='1.2' fill='none' stroke-linecap='round'/></svg>");
+  background-repeat:no-repeat;background-position:right 6px center;
+}
+.sel:focus{border-color:var(--brand);}
+.inw{position:relative;display:flex;align-items:center;}
+.inw input{
+  width:100%;height:26px;border:1px solid var(--line);border-radius:4px;background:#fff;
+  padding:0 6px;text-align:right;font-family:var(--mono);font-size:12px;outline:none;
+  font-variant-numeric:tabular-nums;
+}
+.inw input:focus{border-color:var(--brand);box-shadow:inset 0 0 0 .5px var(--brand);}
+.inw .suf{position:absolute;right:2px;font-size:10.5px;color:var(--ink3);pointer-events:none;}
+.inw.has-suf input{padding-right:10px;}
+.c-sub{text-align:right;font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink);}
+.c-per{text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums;}
+.c-more{
+  width:22px;height:22px;border-radius:4px;display:grid;place-items:center;color:var(--ink3);
+  font-size:14px;line-height:1;opacity:0;transition:opacity .12s,background .12s;
+}
+.row:hover .c-more{opacity:1;}
+.c-more:hover{background:#EDEAE3;color:var(--ink);}
+
+.row.off .c-name,.row.off .c-sub,.row.off .c-per{text-decoration:line-through;color:#B5AFA4;}
+.row.off{opacity:.5;}
+.row.off .bar{opacity:.35;}
+.row.off .inw input,.row.off .sel{opacity:.7;}
+
+.row.ghost{pointer-events:none;border-bottom:1px solid #EAE6DE;}
+.row.ghost:hover{background:transparent;}
+.row.ghost:last-child{border-bottom:none;}
+.flash{animation:flash .55s ease-out;}
+@keyframes flash{0%{background:#E4EFE9;}100%{background:transparent;}}
+
+/* 表格底部工具 */
+.tfoot{flex:none;display:flex;align-items:center;gap:10px;padding:9px 4px 9px 0;;width:100%;}
+.add-btn{
+  flex:1;height:30px;border:1px dashed #D5CFC4;border-radius:4px;color:var(--ink3);
+  font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:border-color .12s,color .12s,background .12s;
+}
+.add-btn:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft);}
+.hint{font-size:11px;color:var(--ink3);white-space:nowrap;}
+
+/* 分组占比 */
+.groups{flex:none;margin-top:auto;border-top:1px solid var(--line);padding:9px 4px 12px 0;;width:100%;}
+.groups .g-h{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px;}
+.groups .g-t{font-size:10.5px;color:var(--ink3);letter-spacing:.08em;}
+.groups .g-s{font-size:10.5px;color:var(--ink3);font-family:var(--mono);}
+.stack{display:flex;height:8px;border-radius:4px;overflow:hidden;background:#EDEAE3;margin-bottom:7px;}
+.stack i{display:block;height:8px;transition:width .25s ease;position:relative;}
+.stack i:hover{filter:brightness(1.08);}
+.glegend{display:flex;flex-wrap:wrap;gap:3px 13px;}
+.glegend .li{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink3);cursor:default;}
+.glegend .li b{font-family:var(--mono);font-weight:500;color:var(--ink2);font-variant-numeric:tabular-nums;}
+.glegend .dot{width:7px;height:7px;border-radius:2px;flex:none;}
+
+/* ============ 右：结算栏 ============ */
+.right{
+  border-left:1px solid var(--line);background:var(--soft);padding:14px 16px 16px;
+  display:flex;flex-direction:column;gap:11px;overflow-y:auto;
+}
+.card{background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px 14px;transition:border-color .2s,background .2s;}
+
+.t-card .t-lbl{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--ink3);}
+.t-card .t-val{font-family:var(--mono);font-size:29px;font-weight:700;letter-spacing:-.8px;margin:3px 0 1px;font-variant-numeric:tabular-nums;line-height:1.15;}
+.t-card .t-val .cur{font-size:16px;font-weight:600;letter-spacing:0;margin-right:1px;}
+.t-card .t-sub{font-size:11px;color:var(--ink3);display:flex;justify-content:space-between;}
+.bar-wrap{height:5px;border-radius:3px;background:#EDEAE3;margin-top:7px;position:relative;overflow:hidden;}
+.bar-wrap i{display:block;height:5px;border-radius:3px;transition:width .3s ease,background .2s;}
+.bar-wrap .tick{position:absolute;top:0;width:2px;height:5px;background:rgba(255,255,255,.92);z-index:2;}
+.bar-wrap .tick2{background:rgba(27,26,23,.16);}
+
+.b-card .b-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.b-card .b-lbl{font-size:11px;color:var(--ink3);}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;}
+.seg button{font-size:10.5px;padding:2px 7px;color:var(--ink3);background:#fff;line-height:1.5;}
+.seg button.on{background:var(--brand-soft);color:var(--brand);font-weight:600;}
+.b-inw{display:flex;align-items:center;gap:2px;border-bottom:1px solid var(--line);padding-bottom:2px;}
+.b-inw .cur{font-size:14px;color:var(--ink3);font-family:var(--mono);}
+.b-inw input{
+  flex:1;border:none;outline:none;background:transparent;font-family:var(--mono);
+  font-size:19px;font-weight:600;letter-spacing:-.3px;padding:0;min-width:0;font-variant-numeric:tabular-nums;
+}
+.b-inw:focus-within{border-bottom-color:var(--brand);}
+.b-sub{font-size:11px;color:var(--ink3);margin-top:5px;display:flex;justify-content:space-between;align-items:center;}
+.link{color:var(--brand);cursor:pointer;font-size:11px;border-bottom:1px dotted var(--brand);}
+
+.v-card .v-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);}
+.v-card .v-val{font-family:var(--mono);font-size:23px;font-weight:700;letter-spacing:-.6px;margin:2px 0 0;font-variant-numeric:tabular-nums;}
+.v-card .v-sub{font-size:11px;color:var(--ink3);font-family:var(--mono);}
+.v-card .margin{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line2);font-size:11px;color:var(--ink2);line-height:1.6;}
+.v-card .margin b{font-family:var(--mono);font-weight:600;color:var(--ink);}
+.v-card.safe{border-color:#CBE0D4;background:#FCFEFD;}
+.v-card.safe .v-val{color:var(--save);}
+.v-card.near{border-color:#E8D8B4;background:#FFFDF7;}
+.v-card.near .v-val{color:var(--warn);}
+.v-card.over{border-color:#E8C9C2;background:#FDF7F5;}
+.v-card.over .v-val{color:var(--over);}
+
+/* 右栏子项不参与压缩，否则矮窗口下建议区会被按钮挤扁 */
+.right > *{flex-shrink:0;}
+
+/* 回线建议 */
+.sg{border:1px solid var(--line);border-radius:6px;background:#fff;overflow:hidden;display:none;}
+.sg.show{display:block;}
+.sg-h{padding:8px 11px;border-bottom:1px solid var(--line2);display:flex;justify-content:space-between;align-items:center;background:#FEFBFA;}
+.sg-h .t{font-size:11px;font-weight:600;color:var(--over);letter-spacing:.02em;}
+.sg-h .g{font-size:10.5px;color:var(--ink3);font-family:var(--mono);}
+.sg-i{display:flex;align-items:center;gap:7px;padding:7px 11px;border-bottom:1px solid var(--line2);}
+.sg-i:last-child{border-bottom:none;}
+.sg-i .tx{flex:1;min-width:0;}
+.sg-i .tx .a{font-size:11.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sg-i .tx .b{font-size:10.5px;color:var(--ink3);font-family:var(--mono);}
+.sg-i .sv{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--save);white-space:nowrap;}
+.sg-i .ap{
+  width:44px;height:22px;border:1px solid var(--line);border-radius:4px;font-size:11px;color:var(--ink2);
+  flex:none;transition:all .12s;
+}
+.sg-i .ap:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft);}
+
+.actions{display:flex;gap:7px;margin-top:auto;padding-top:2px;}
+.actions .btn{flex:1;justify-content:center;height:32px;}
+
+/* toast */
+.toast{
+  position:fixed;left:50%;bottom:128px;transform:translate(-50%,8px);background:#2A2723;color:#fff;
+  padding:9px 14px;border-radius:6px;font-size:12px;display:flex;align-items:center;gap:12px;
+  opacity:0;pointer-events:none;transition:all .22s ease;z-index:999;box-shadow:0 6px 22px rgba(0,0,0,.16);
+}
+.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto;}
+.toast .undo{color:#8FD3B8;font-size:12px;font-weight:600;border-bottom:1px solid rgba(143,211,184,.4);}
+
+/* 空状态 */
+.empty{padding:38px 20px;text-align:center;color:var(--ink3);}
+.empty .t{font-size:13px;color:var(--ink2);margin-bottom:4px;}
+.empty .s{font-size:11.5px;margin-bottom:12px;}
+.empty .btns{display:flex;gap:8px;justify-content:center;}
+
+/* tooltip */
+.tip{
+  position:fixed;background:#2A2723;color:#fff;font-size:11px;padding:5px 8px;border-radius:4px;
+  pointer-events:none;opacity:0;transition:opacity .12s;z-index:1000;max-width:260px;line-height:1.5;
+}
+.tip.show{opacity:1;}
+
+@media (max-height:700px){
+  .right{padding:10px 14px 12px;gap:8px;}
+  .card{padding:9px 12px;}
+  .t-card .t-val{font-size:24px;margin:2px 0 0;}
+  .v-card .v-val{font-size:19px;}
+  .b-inw input{font-size:17px;}
+  .sg-i{padding:5px 10px;}
+  .sg-h{padding:6px 10px;}
+  .actions .btn{height:30px;}
+  .v-card .margin{margin-top:4px;padding-top:4px;font-size:10.5px;}
+}
+
+@media (max-width:1180px){
+  main{grid-template-columns:1fr 380px;}
+  header .brand span{display:none;}
+  .hname{width:130px;}
+  .thead,.row{grid-template-columns:4px minmax(140px,1fr) 96px 92px 56px 92px 54px 26px;gap:8px;}
+}
+
+/* ============ 打印 ============ */
+@media print{
+  @page{size:A4;margin:14mm 12mm;}
+  body{overflow:visible;background:#fff;font-size:9.5pt;}
+  .app{height:auto;display:block;}
+  header{height:auto;border:none;padding:0 0 6px;display:block;}
+  .brand{font-size:12pt;margin-bottom:6px;}
+  .hright,.c-more,.add-btn,.tfoot,.actions,.seg,.stepper .step-btn,.tip,.toast,.link{display:none !important;}
+  .hname,.hdate{border:none !important;padding:0;width:auto;font-size:10pt;background:transparent !important;}
+  .hname{font-weight:700;width:auto;}
+  .hdate::-webkit-calendar-picker-indicator{display:none !important;}
+  .hdate{color:#4E4B45;}
+  body.no-date .hdate{display:none !important;}
+  .stepper{border:none !important;background:transparent !important;}
+  .stepper .lbl{padding:0 2px 0 0;font-size:9.5pt;}
+  .hnum{border:none !important;width:auto !important;background:transparent !important;font-size:10pt;font-weight:700;padding:0 2px !important;}
+  .stepper .unit{padding:0 0 0 1px;font-size:9.5pt;}
+  .hdiv{display:none !important;}
+  main{display:block;}
+  .left{padding:0;overflow:visible;}
+  .right{border:none;background:#fff;padding:12px 0 0;overflow:visible;display:block;}
+  .tbody{overflow:visible;flex:none;}
+  .row,.row.ghost{height:26px;border-bottom:1px solid #E5E2DA;page-break-inside:avoid;}
+  .row.ghost{display:none !important;}
+  .row.blank{display:none !important;}
+  .row .bar{height:12px;}
+  .row .sel,.row .inw input,.row .c-name{border:none !important;background:transparent !important;padding:0 !important;height:auto;}
+  .row .sel{appearance:none;background-image:none !important;padding:0 !important;}
+  .c-sub,.c-per,.c-name{font-size:9pt;}
+  .inw{justify-content:flex-end;}
+  .inw .suf{position:static;margin-left:1px;transform:none;}
+  .inw.has-suf input{padding-right:0 !important;}
+  .card{border:1px solid #D9D5CC;margin-bottom:6px;page-break-inside:avoid;padding:7px 9px;}
+  .right{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;align-items:start;}
+  .t-card .t-val{font-size:13pt;letter-spacing:-.2px;}
+  .t-card .t-val .cur{font-size:9pt;}
+  .v-card .v-val{font-size:11pt;}
+  .b-inw input{font-size:12pt;}
+  .v-card .margin{font-size:8pt;}
+  .t-card .bar-wrap{margin-top:4px;}
+  .sg{display:none !important;}
+  body.no-budget .b-card{display:none !important;}
+  .groups{margin-top:10px;border-top:1px solid #D9D5CC;}
+  .stack{height:6px;}
+  .stack i{opacity:1 !important;height:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .glegend .li{font-size:8pt;}
+  .v-card,.t-card,.groups{page-break-inside:avoid;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+  <div class="brand">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="0.5" y="0.5" width="15" height="15" rx="3" stroke="#1D5C4D"/>
+      <path d="M4 10.5V6.6M6.7 10.5V4.5M9.4 10.5V7.8M12 10.5V5.6" stroke="#1D5C4D" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>
+    <span>活动预算</span>
+  </div>
+  <div class="hdiv"></div>
+
+  <input class="hname" id="evName" value="未命名活动" maxlength="30" spellcheck="false">
+  <input class="hdate" id="evDate" type="date">
+
+  <div class="stepper">
+    <span class="lbl">人数</span>
+    <button class="step-btn" id="stepDown" title="减 1（Shift 减 10）">−</button>
+    <input class="hnum" id="evNum" inputmode="numeric" value="30">
+    <button class="step-btn" id="stepUp" title="加 1（Shift 加 10）">+</button>
+    <span class="unit">人</span>
+  </div>
+
+  <div class="hright">
+    <div class="dd-wrap">
+      <button class="btn" id="tplBtn">切换模板
+        <svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 1l3 3 3-3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>
+      </button>
+      <div class="dd" id="tplDD"></div>
+    </div>
+    <div class="dd-wrap">
+      <button class="btn" id="snapBtn">方案
+        <svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 1l3 3 3-3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>
+      </button>
+      <div class="dd" id="snapDD"></div>
+    </div>
+    <button class="btn ghost" id="resetBtn">清空</button>
+  </div>
+</header>
+
+<main>
+  <section class="left">
+    <div class="thead">
+      <span></span>
+      <span>科目</span>
+      <span>计价方式</span>
+      <span class="r">单价</span>
+      <span class="r">数量</span>
+      <span class="r">小计</span>
+      <span class="r">人均</span>
+      <span></span>
+    </div>
+    <div class="tbody" id="rows"></div>
+    <div class="tfoot">
+      <button class="add-btn" id="addBtn">
+        <svg width="11" height="11" viewBox="0 0 11 11"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        添加科目
+      </button>
+      <span class="hint" id="rowHint"></span>
+    </div>
+    <div class="groups">
+      <div class="g-h">
+        <span class="g-t">分组占比</span>
+        <span class="g-s" id="gTotal"></span>
+      </div>
+      <div class="stack" id="gStack"></div>
+      <div class="glegend" id="gLegend"></div>
+    </div>
+  </section>
+
+  <aside class="right">
+    <!-- 合计 -->
+    <div class="card t-card">
+      <div class="t-lbl"><span>合计支出</span><span id="cntLbl">0 项计入</span></div>
+      <div class="t-val" id="totalVal"><span class="cur">¥</span>0</div>
+      <div class="t-sub"><span id="usageTxt">未设置预算</span><span id="baseTxt"></span></div>
+      <div class="bar-wrap">
+        <i id="usageBar" style="width:0%"></i>
+        <span class="tick" style="left:90%"></span>
+        <span class="tick2" style="left:100%;display:none"></span>
+      </div>
+    </div>
+
+    <!-- 预算 -->
+    <div class="card b-card">
+      <div class="b-row">
+        <span class="b-lbl">预算上限</span>
+        <div class="seg">
+          <button data-bm="total" class="on">总额</button>
+          <button data-bm="perCapita">人均</button>
+        </div>
+      </div>
+      <div class="b-inw">
+        <span class="cur">¥</span>
+        <input id="budgetInput" inputmode="numeric" placeholder="0" value="">
+      </div>
+      <div class="b-sub">
+        <span id="budgetSub">填写后可查看差额</span>
+        <span class="link" id="budgetHint" style="display:none"></span>
+      </div>
+    </div>
+
+    <!-- 差额 -->
+    <div class="card v-card" id="vCard">
+      <div class="v-lbl"><span>差额</span><span id="vTag"></span></div>
+      <div class="v-val" id="vVal">—</div>
+      <div class="v-sub" id="vSub"></div>
+      <div class="margin" id="margin"></div>
+    </div>
+
+    <!-- 回线建议 -->
+    <div class="sg" id="sugBox">
+      <div class="sg-h">
+        <span class="t" id="sugTitle">还差 ¥0</span>
+        <span class="g">按当前结构</span>
+      </div>
+      <div id="sugList"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="copyBtn">复制明细</button>
+      <button class="btn pri" id="printBtn">打印</button>
+    </div>
+  </aside>
+</main>
+
+</div>
+
+<div class="toast" id="toast"><span id="toastMsg"></span><a class="undo" id="toastUndo" style="display:none">撤销</a></div>
+<div class="tip" id="tip"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ======================= 常量 ======================= */
+const GROUPS = {
+  venue:    {name:'场地', color:'#1D5C4D'},
+  catering: {name:'餐饮', color:'#C9A227'},
+  material: {name:'物料', color:'#8C7BA6'},
+  labor:    {name:'人力', color:'#7A9B8C'},
+  transport:{name:'交通', color:'#7E93A8'},
+  other:    {name:'其他', color:'#B9B4A8'}
+};
+const MODES = {
+  perCapita:{name:'按人头'},
+  lump:{name:'一次性'},
+  quantity:{name:'数量×单价'},
+  percent:{name:'按比例'}
+};
+
+const TEMPLATES = {
+  t1:{name:'部门团建', headcount:30, items:[
+    ['场地租赁（含布置）','venue','quantity',3000,1],
+    ['午餐（自助）','catering','perCapita',88],
+    ['茶歇','catering','perCapita',25],
+    ['活动物料','material','perCapita',35],
+    ['教练 / 主持','labor','lump',2500],
+    ['大巴往返','transport','quantity',1200,2],
+    ['活动保险','other','perCapita',8],
+    ['不可预见费','other','percent',null,null,8]
+  ]},
+  t2:{name:'年会 / 庆典', headcount:120, items:[
+    ['宴会厅（含舞台音响）','venue','quantity',18000,1],
+    ['晚宴（桌餐）','catering','perCapita',280],
+    ['酒水饮料','catering','perCapita',60],
+    ['舞美 / 灯光','material','lump',12000],
+    ['伴手礼','material','perCapita',120],
+    ['主持 / 演出','labor','lump',8000],
+    ['摄影摄像','labor','lump',4000],
+    ['抽奖奖品','other','lump',15000],
+    ['不可预见费','other','percent',null,null,10]
+  ]},
+  t3:{name:'培训 / 工作坊', headcount:24, items:[
+    ['会议室（半天）','venue','quantity',1500,1],
+    ['讲师费','labor','lump',6000],
+    ['午餐','catering','perCapita',45],
+    ['茶歇','catering','perCapita',20],
+    ['教材 / 讲义','material','perCapita',30],
+    ['教具耗材','material','lump',800],
+    ['不可预见费','other','percent',null,null,5]
+  ]},
+  t4:{name:'发布会', headcount:80, items:[
+    ['场地（含基础搭建）','venue','quantity',25000,1],
+    ['主视觉与物料','material','lump',15000],
+    ['媒体礼盒','material','perCapita',200],
+    ['茶歇','catering','perCapita',60],
+    ['主持 / 串场','labor','lump',3000],
+    ['摄影摄像 + 直播','labor','lump',12000],
+    ['嘉宾接送','transport','quantity',600,10],
+    ['不可预见费','other','percent',null,null,10]
+  ]},
+  t5:{name:'市集 / 快闪', headcount:20, items:[
+    ['场地租金（2 天）','venue','quantity',8000,2],
+    ['摊位搭建','material','lump',6000],
+    ['桌椅租赁','material','quantity',80,10],
+    ['宣传单页 / 周边','material','perCapita',5],
+    ['现场执行人员','labor','quantity',400,4],
+    ['运输 / 搬运','transport','lump',1200],
+    ['不可预见费','other','percent',null,null,8]
+  ]},
+  t6:{name:'客户答谢会', headcount:20, items:[
+    ['餐厅包间 / 场地','venue','quantity',5000,1],
+    ['餐费','catering','perCapita',380],
+    ['酒水','catering','perCapita',120],
+    ['伴手礼','material','perCapita',260],
+    ['现场布置','material','lump',1500],
+    ['专车接送','transport','quantity',400,6],
+    ['不可预见费','other','percent',null,null,8]
+  ]}
+};
+
+const KEY_DRAFT = 'ebc:draft:v1';
+const KEY_SNAP  = 'ebc:snapshots:v1';
+
+/* ======================= 工具 ======================= */
+let seq = 0;
+function uid(){ return 'it_' + (Date.now().toString(36)) + (seq++).toString(36); }
+
+function fmt(n){
+  if(n===null||n===undefined||isNaN(n)) return '';
+  const v = Math.round(n*100)/100;
+  return v.toLocaleString('zh-CN', {maximumFractionDigits:2});
+}
+function fmt0(n){ return Math.round(n||0).toLocaleString('zh-CN'); }
+function money(n){ return '¥' + fmt0(n); }
+function num(str){
+  if(typeof str === 'number') return str;
+  const s = String(str).replace(/[^\d.\-]/g,'');
+  if(s==='' || s==='-' || s==='.') return 0;
+  const v = parseFloat(s);
+  return isNaN(v) ? 0 : v;
+}
+function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
+function el(id){ return document.getElementById(id); }
+
+/* ======================= 状态 ======================= */
+let state = null;
+let undoStack = null;   // {state, label}
+let lastSnap = null;    // 建议应用前的快照
+
+function blankState(){
+  return {
+    name:'未命名活动', date:'', headcount:30,
+    budget:{ mode:'total', total:0, perCapita:null },
+    items:[]
+  };
+}
+
+function fromTemplate(key){
+  const t = TEMPLATES[key];
+  const items = t.items.map(x=>{
+    const mode = x[2];
+    const it = {
+      id:uid(), name:x[0], group:x[1], mode,
+      unitPrice: mode==='percent' ? 0 : x[3],
+      qty: mode==='quantity' ? x[4] : null,
+      rate: mode==='percent' ? x[5] : null,
+      enabled:true
+    };
+    return it;
+  });
+  return items;
+}
+
+/* ======================= 计算 ======================= */
+function subOf(it, N){
+  if(!it.enabled) return 0;
+  switch(it.mode){
+    case 'perCapita': return Math.round(N * (it.unitPrice||0));
+    case 'lump':      return Math.round(it.unitPrice||0);
+    case 'quantity':  return Math.round((it.qty||0) * (it.unitPrice||0));
+    default: return 0;
+  }
+}
+
+function budgetValue(){
+  const b = state.budget;
+  if(b.mode === 'perCapita'){
+    if(!b.perCapita) return 0;
+    return Math.round(b.perCapita * state.headcount);
+  }
+  return b.total || 0;
+}
+
+/** 全量计算，纯函数式，返回一个结果对象 */
+function compute(){
+  const N = state.headcount;
+  const B = budgetValue();
+  const items = state.items;
+  const active = items.filter(i=>i.enabled);
+  const nonPct = active.filter(i=>i.mode !== 'percent');
+  const pcts   = active.filter(i=>i.mode === 'percent');
+
+  let base = 0;
+  const subs = {};
+  nonPct.forEach(it=>{
+    const s = subOf(it, N);
+    subs[it.id] = s;
+    base += s;
+  });
+
+  let rateSum = 0;
+  pcts.forEach(it=>{ rateSum += (it.rate||0)/100; });
+
+  let pctSum = 0;
+  items.forEach(it=>{
+    if(it.mode !== 'percent') return;
+    if(!it.enabled){ subs[it.id] = 0; return; }
+    const s = Math.round(base * (it.rate||0)/100);
+    subs[it.id] = s;
+    pctSum += s;
+  });
+
+  const total = base + pctSum;
+  const k = 1 + rateSum;
+
+  // 人均：禁止 toFixed，先整数化再除
+  const perCap = N > 0 ? Math.round(total*100/N)/100 : null;
+  const variance = B > 0 ? B - total : null;
+  const usage = B > 0 ? total/B : null;
+
+  // 分组
+  const g = {};
+  Object.keys(GROUPS).forEach(key=> g[key] = 0);
+  items.forEach(it=>{
+    if(!it.enabled) return;
+    g[it.group] = (g[it.group]||0) + (subs[it.id]||0);
+  });
+
+  // 边际：每 +1 人合计增加多少
+  let pcUnit = 0;
+  nonPct.forEach(it=>{ if(it.mode==='perCapita') pcUnit += (it.unitPrice||0); });
+  const margin = pcUnit * k;
+
+  // 可承受人数
+  let nMax = null;
+  if(B > 0 && pcUnit > 0){
+    const fixed = nonPct.filter(i=>i.mode==='lump'||i.mode==='quantity')
+                        .reduce((s,i)=> s + subOf(i, N), 0);
+    nMax = Math.floor((B - fixed*k) / (pcUnit*k));
+    let guard = 0;
+    while(nMax > 0 && totalAt(nMax, nonPct, pcts) > B && guard++ < 500) nMax--;
+    guard = 0;
+    while(totalAt(nMax+1, nonPct, pcts) <= B && guard++ < 500 && nMax < 9999) nMax++;
+    if(nMax < 0) nMax = 0;
+    if(nMax > 9999) nMax = 9999;
+  }
+
+  return {N, B, base, total, perCap, variance, usage, subs, groups:g, k, margin, nMax, pctSum, rateSum, nonPct, pcts};
+}
+
+function totalAt(n, nonPct, pcts){
+  let b = 0;
+  nonPct.forEach(it=>{
+    if(it.mode==='perCapita') b += Math.round(n * (it.unitPrice||0));
+    else if(it.mode==='lump') b += Math.round(it.unitPrice||0);
+    else b += Math.round((it.qty||0)*(it.unitPrice||0));
+  });
+  let p = 0;
+  pcts.forEach(it=> p += Math.round(b * (it.rate||0)/100));
+  return b + p;
+}
+
+/* ======================= 回线建议 ======================= */
+/** 模拟：给定人数与科目，算出合计（与 compute 的口径完全一致） */
+function simTotal(items, N){
+  let base = 0;
+  items.forEach(it=>{
+    if(!it.enabled || it.mode==='percent') return;
+    base += subOf(it, N);
+  });
+  let p = 0;
+  items.forEach(it=>{
+    if(!it.enabled || it.mode!=='percent') return;
+    p += Math.round(base * (it.rate||0)/100);
+  });
+  return base + p;
+}
+
+function buildSuggestions(r){
+  if(!r || r.B <= 0 || r.variance === null || r.variance >= 0) return [];
+  const gap = -r.variance;
+  const k = r.k;
+  const N = r.N;
+  const baseTotal = r.total;
+  const out = [];
+
+  // ① 动单价：金额最大的按人头科目
+  const pcs = r.nonPct.filter(i=>i.mode==='perCapita' && (i.unitPrice||0) > 0)
+                     .sort((a,b)=> subOf(b,N) - subOf(a,N));
+  if(pcs.length && N > 0){
+    const it = pcs[0];
+    const unit = N * k;
+    const dp = Math.ceil(gap / unit);
+    if(dp > 0 && dp <= it.unitPrice){
+      // 用真实重算求节省额，避免浮点估算与实际合计差 1 元
+      const clone = state.items.map(x=> Object.assign({}, x));
+      const target = clone.find(x=>x.id === it.id);
+      target.unitPrice = it.unitPrice - dp;
+      const save = baseTotal - simTotal(clone, N);
+      out.push({kind:'price', id:it.id, delta:dp, save,
+                label:it.name + ' 单价 −' + dp + ' 元',
+                note:'按人头，降 ' + dp + ' 元/人'});
+    }
+  }
+
+  // ② 动结构：先找"刚好够"的最小科目
+  const cands = r.nonPct.filter(i=> i.group !== 'venue' && i.mode !== 'percent' && subOf(i,N)*k >= gap)
+                        .sort((a,b)=> subOf(a,N) - subOf(b,N));
+  const usedId = out.length && out[0].kind==='price' ? out[0].id : null;
+  const pick = cands.find(i=> i.id !== usedId) || cands[0];
+
+  if(pick){
+    const offClone = state.items.map(x=> Object.assign({}, x));
+    offClone.find(x=>x.id === pick.id).enabled = false;
+    const offSave = baseTotal - simTotal(offClone, N);
+
+    // 停用一整个科目会省下远超缺口（缺口往往只是零头），这时砍掉整项太粗暴，
+    // 改成把这一项降价/减量到刚好，既回线又保住科目
+    let downgraded = null;
+    if(offSave > gap * 2 && N > 0){
+      if(pick.mode === 'perCapita'){
+        const d = Math.ceil(gap / (N * k));
+        if(d > 0 && d < pick.unitPrice) downgraded = {delta:d, save0:d*N*k};
+      }else if(pick.mode === 'lump'){
+        const d = Math.ceil(gap / k);
+        if(d > 0 && d < pick.unitPrice) downgraded = {delta:d, save0:d*k};
+      }else if(pick.mode === 'quantity' && pick.qty > 1){
+        const d = Math.ceil(gap / ((pick.unitPrice||0) * k));
+        if(d > 0 && d < pick.qty) downgraded = {delta:d, save0:d*(pick.unitPrice||0)*k, qty:true};
+      }
+    }
+
+    if(downgraded){
+      const c2 = state.items.map(x=> Object.assign({}, x));
+      const t2 = c2.find(x=>x.id === pick.id);
+      if(downgraded.qty) t2.qty = pick.qty - downgraded.delta;
+      else t2.unitPrice = pick.unitPrice - downgraded.delta;
+      out.push({
+        kind: downgraded.qty ? 'qty' : 'price2',
+        id: pick.id,
+        delta: downgraded.delta,
+        save: baseTotal - simTotal(c2, N),
+        label: pick.name + (downgraded.qty
+                ? ' 数量 −' + downgraded.delta
+                : (pick.mode === 'lump' ? ' −' + downgraded.delta + ' 元' : ' 单价 −' + downgraded.delta + ' 元')),
+        note: downgraded.qty ? '数量下调，保留该科目' : '下调单价，保留该科目'
+      });
+    }else{
+      out.push({kind:'off', id:pick.id, save: offSave,
+                label:'停用 ' + pick.name,
+                note:'该项不计入合计，数据保留'});
+    }
+  }
+
+  // ③ 动规模：减人。缺口大到需要砍掉三成以上的人时就不给了——
+  // 这种局说明固定成本（场地/讲师）占大头，减人既回不了线也会毁掉活动
+  const pcUnit = r.nonPct.filter(i=>i.mode==='perCapita').reduce((s,i)=>s+(i.unitPrice||0),0);
+  if(pcUnit > 0 && N > 1){
+    const unit = pcUnit * k;
+    const dn = Math.ceil(gap / unit);
+    if(dn > 0 && dn < N && dn <= Math.max(1, N * 0.3)){
+      const save = baseTotal - simTotal(state.items, N - dn);
+      out.push({kind:'head', delta:dn, save,
+                label:'减少 ' + dn + ' 人',
+                note:'边际 ' + fmt(Math.round(unit*100)/100) + ' 元/人'});
+    }
+  }
+
+  return out.slice(0,3);
+}
+
+/* ======================= 渲染：科目表 ======================= */
+const rowsEl = el('rows');
+
+function rowHTML(it){
+  const g = GROUPS[it.group] || GROUPS.other;
+  const off = it.enabled ? '' : ' off';
+  const priceVal = it.mode==='percent'
+      ? (it.rate === null || it.rate === undefined ? '' : it.rate)
+      : (it.unitPrice ? fmt(it.unitPrice) : '');
+  const priceType = it.mode==='percent' ? 'rate' : 'price';
+
+  const qtyCell = it.mode==='quantity'
+      ? '<div class="inw"><input data-f="qty" inputmode="decimal" value="'+(it.qty===null?'':it.qty)+'"></div>'
+      : '<div class="c-per" style="font-family:var(--mono)">—</div>';
+
+  return ''+
+  '<div class="row'+off+'" data-id="'+it.id+'">'+
+    '<i class="bar" style="background:'+g.color+'"></i>'+
+    '<input class="c-name" data-f="name" value="'+esc(it.name)+'" spellcheck="false" maxlength="20">'+
+    '<select class="sel" data-f="mode">'+
+      Object.keys(MODES).map(m=>'<option value="'+m+'"'+(it.mode===m?' selected':'')+'>'+MODES[m].name+'</option>').join('')+
+    '</select>'+
+    '<div class="inw'+(it.mode==='percent'?' has-suf':'')+'">'+
+      '<input data-f="'+priceType+'" inputmode="decimal" value="'+priceVal+'">'+
+      (it.mode==='percent'?'<span class="suf">%</span>':'')+
+    '</div>'+
+    qtyCell+
+    '<span class="c-sub" data-sub></span>'+
+    '<span class="c-per" data-per></span>'+
+    '<button class="c-more" data-more title="更多">⋯</button>'+
+  '</div>';
+}
+
+function esc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let renderRowsQueued = false;
+function renderRows(){
+  rowsEl.innerHTML = '';
+  if(!state.items.length){
+    rowsEl.innerHTML =
+      '<div class="empty">'+
+        '<div class="t">还没有科目</div>'+
+        '<div class="s">选一个场景模板开始，或手动添加第一项</div>'+
+        '<div class="btns">'+
+          '<button class="btn" data-act="tpl-t1">用团建模板</button>'+
+          '<button class="btn" data-act="add">手动添加</button>'+
+        '</div>'+
+      '</div>';
+    paintNumbers();            // 空表也要把右侧归零，否则会残留上一次的合计
+    return;
+  }
+  rowsEl.innerHTML = state.items.map(rowHTML).join('');
+  paintNumbers();
+  // 首帧容器可能尚未完成布局，量到的高度不可靠，放到下一帧再补
+  requestAnimationFrame(fillGhosts);
+}
+
+/** 用空行把表格区填满，既补齐视觉，也暗示「还可以继续加」 */
+function fillGhosts(){
+  if(!state || !state.items.length) return;
+  const ROW_H = 42;
+  const avail = rowsEl.clientHeight;
+  const used = state.items.length * ROW_H;
+  const n = Math.max(0, Math.floor((avail - used) / ROW_H));
+  const cur = rowsEl.querySelectorAll('.row.ghost').length;
+  if(cur === n) return;
+  rowsEl.querySelectorAll('.row.ghost').forEach(e=> e.remove());
+  if(n > 0) rowsEl.insertAdjacentHTML('beforeend', '<div class="row ghost"></div>'.repeat(n));
+}
+
+/** 只更新数字文本，不动输入框（避免光标跳动） */
+function paintNumbers(){
+  if(!state) return;
+  const r = compute();
+  const N = r.N;
+
+  rowsEl.querySelectorAll('.row').forEach(row=>{
+    const it = state.items.find(i=>i.id === row.dataset.id);
+    if(!it) return;
+    const subEl = row.querySelector('[data-sub]');
+    const perEl = row.querySelector('[data-per]');
+    if(!it.enabled){
+      subEl.textContent = '—';
+      perEl.textContent = '—';
+      return;
+    }
+    const s = r.subs[it.id] || 0;
+    subEl.textContent = fmt0(s);
+    perEl.textContent = N > 0 ? (Math.round(s*10/N)/10).toLocaleString('zh-CN',{minimumFractionDigits:1,maximumFractionDigits:1}) : '—';
+    // 刚添加还没填的空科目：打印时自动省略，避免报批单里出现 0 元空行
+    row.classList.toggle('blank', !it.name.trim() || (it.name === '新科目' && s === 0));
+  });
+
+  paintSide(r);
+}
+
+/* ======================= 渲染：结算栏 ======================= */
+function paintSide(r){
+  const N = r.N, B = r.B, total = r.total;
+
+  // 合计
+  el('totalVal').innerHTML = '<span class="cur">¥</span>' + fmt0(total);
+  const counted = state.items.filter(i=>i.enabled).length;
+  el('cntLbl').textContent = counted + ' 项计入';
+
+  // 使用率
+  let usagePct = 0;
+  if(B > 0){
+    usagePct = Math.min(999, total/B*100);
+    el('usageTxt').textContent = '已用 ' + (Math.round(total/B*1000)/10) + '%';
+    el('baseTxt').textContent = '预算 ' + money(B);
+    const bar = el('usageBar');
+    bar.style.width = Math.min(100, usagePct) + '%';
+    bar.style.background = total > B ? 'var(--over)' : (total > B*0.9 ? 'var(--warn)' : 'var(--save)');
+  }else{
+    el('usageTxt').textContent = '未设置预算上限';
+    el('baseTxt').textContent = '';
+    el('usageBar').style.width = '0%';
+  }
+
+  // 预算输入
+  const bi = el('budgetInput');
+  if(document.activeElement !== bi){
+    if(!B) bi.value = '';
+    else bi.value = state.budget.mode === 'perCapita' ? fmt(state.budget.perCapita) : fmt0(B);
+  }
+
+  const perBudget = (B > 0 && N > 0) ? Math.round(B*100/N)/100 : null;
+  if(state.budget.mode === 'perCapita'){
+    el('budgetSub').textContent = B > 0 ? ('合计 ' + money(B)) : '填写后可查看差额';
+  }else{
+    el('budgetSub').textContent = perBudget !== null ? ('人均预算 ¥' + fmt(perBudget)) : '填写后可查看差额';
+  }
+
+  // 预算为空时给一个可点的参考值；有值就收起，避免与"人均预算"挤在一起
+  const hint = el('budgetHint');
+  if(B <= 0 && state.items.length){
+    hint.style.display = '';
+    hint.textContent = '按人均 400 估算';
+    hint.onclick = ()=>{
+      state.budget.mode = 'total';
+      state.budget.total = 400 * state.headcount;
+      document.querySelectorAll('.seg button').forEach(x=> x.classList.toggle('on', x.dataset.bm === 'total'));
+      bInp.value = fmt0(state.budget.total);
+      paintNumbers(); saveDraft();
+    };
+  }else{
+    hint.style.display = 'none';
+    hint.onclick = null;
+  }
+
+  // 差额
+  const vc = el('vCard');
+  vc.className = 'card v-card';
+  if(B <= 0){
+    el('vTag').textContent = '';
+    el('vVal').textContent = '—';
+    el('vVal').style.color = '';
+    el('vSub').textContent = '';
+  }else if(total > B){
+    vc.classList.add('over');
+    el('vTag').textContent = '超支';
+    el('vVal').textContent = '−¥' + fmt0(total - B);
+    el('vSub').textContent = '超出 ' + (Math.round((total-B)/B*1000)/10) + '% · 人均实际 ' + (r.perCap!==null?'¥'+fmt(r.perCap):'—');
+  }else if(total > B*0.9){
+    vc.classList.add('near');
+    el('vTag').textContent = '接近上限';
+    el('vVal').textContent = '+¥' + fmt0(B - total);
+    el('vSub').textContent = '已用 ' + (Math.round(total/B*1000)/10) + '% · 人均实际 ' + (r.perCap!==null?'¥'+fmt(r.perCap):'—');
+  }else{
+    vc.classList.add('safe');
+    el('vTag').textContent = '结余';
+    el('vVal').textContent = '+¥' + fmt0(B - total);
+    el('vSub').textContent = '预算使用 ' + (Math.round(total/B*1000)/10) + '% · 人均实际 ' + (r.perCap!==null?'¥'+fmt(r.perCap):'—');
+  }
+
+  // 边际与可承受人数
+  const mEl = el('margin');
+  if(r.margin > 0){
+    let html = '每 +1 人，合计 <b>+' + fmt(Math.round(r.margin*100)/100) + '</b>';
+    if(r.nMax !== null && r.nMax !== undefined && r.nMax < 9999){
+      html += '<br>按当前上限最多 <b>' + r.nMax + '</b> 人';
+      if(N > r.nMax) html += ' <span style="color:var(--over)">（已超 ' + (N - r.nMax) + ' 人）</span>';
+    }
+    mEl.innerHTML = html;
+  }else{
+    mEl.innerHTML = '<span style="color:var(--ink3)">当前结构不随人数变化</span>';
+  }
+
+  // 建议
+  const sugs = buildSuggestions(r);
+  const box = el('sugBox');
+  if(sugs.length){
+    box.classList.add('show');
+    el('sugTitle').textContent = '还差 ¥' + fmt0(total - B);
+    el('sugList').innerHTML = sugs.map((s,i)=>''+
+      '<div class="sg-i">'+
+        '<div class="tx"><div class="a">'+esc(s.label)+'</div><div class="b">'+esc(s.note||'')+'</div></div>'+
+        '<span class="sv">省 '+fmt0(s.save)+'</span>'+
+        '<button class="ap" data-ap="'+i+'">应用</button>'+
+      '</div>').join('');
+    el('sugList').dataset.cache = JSON.stringify(sugs);
+  }else{
+    box.classList.remove('show');
+  }
+
+  // 分组
+  paintGroups(r);
+}
+
+function paintGroups(r){
+  const keys = Object.keys(GROUPS);
+  const total = r.total;
+  const stack = el('gStack');
+  const legend = el('gLegend');
+  const sum = keys.reduce((s,k)=> s + (r.groups[k]||0), 0);
+
+  if(!sum){
+    stack.innerHTML = '';
+    legend.innerHTML = '<span class="li" style="color:var(--ink3)">暂无计入的科目</span>';
+    el('gTotal').textContent = '';
+    return;
+  }
+
+  stack.innerHTML = keys.filter(k=> r.groups[k] > 0).map(k=>{
+    const pct = r.groups[k]/sum*100;
+    return '<i style="width:'+pct.toFixed(3)+'%;background:'+GROUPS[k].color+'" title="'+GROUPS[k].name+' '+fmt0(r.groups[k])+' 元"></i>';
+  }).join('');
+
+  legend.innerHTML = keys.filter(k=> r.groups[k] > 0).map(k=>{
+    const pct = r.groups[k]/sum*100;
+    return '<span class="li" data-g="'+k+'"><span class="dot" style="background:'+GROUPS[k].color+'"></span>'+
+           GROUPS[k].name+' <b>'+pct.toFixed(1)+'%</b> <span style="opacity:.75">'+fmt0(r.groups[k])+'</span></span>';
+  }).join('');
+
+  el('gTotal').textContent = fmt0(sum) + ' 元';
+}
+
+/* ======================= 交互：科目表 ======================= */
+rowsEl.addEventListener('input', e=>{
+  const t = e.target;
+  const row = t.closest('.row');
+  if(!row) return;
+  const it = state.items.find(i=>i.id === row.dataset.id);
+  if(!it) return;
+  const f = t.dataset.f;
+
+  if(f === 'name'){ it.name = t.value; }
+  else if(f === 'price'){ it.unitPrice = Math.max(0, num(t.value)); }
+  else if(f === 'rate'){ it.rate = clamp(num(t.value), 0, 999); }
+  else if(f === 'qty'){ it.qty = Math.max(0, num(t.value)); }
+  else return;
+
+  paintNumbers();
+  saveDraft();
+});
+
+rowsEl.addEventListener('focusout', e=>{
+  const t = e.target;
+  const row = t.closest('.row');
+  if(!row || t.tagName !== 'INPUT') return;
+  const it = state.items.find(i=>i.id === row.dataset.id);
+  if(!it) return;
+  const f = t.dataset.f;
+  if(f === 'price'){ t.value = it.unitPrice ? fmt(it.unitPrice) : ''; }
+  if(f === 'rate'){ t.value = (it.rate === null || it.rate === 0) ? '' : it.rate; }
+  if(f === 'qty'){ t.value = it.qty ? it.qty : ''; }
+});
+
+rowsEl.addEventListener('change', e=>{
+  if(e.target.dataset.f !== 'mode') return;
+  const row = e.target.closest('.row');
+  const it = state.items.find(i=>i.id === row.dataset.id);
+  if(!it) return;
+  const m = e.target.value;
+  if(m === it.mode) return;
+  it.mode = m;
+  if(m === 'quantity' && (it.qty === null || it.qty === undefined)) it.qty = 1;
+  if(m === 'percent'){
+    if(it.rate === null || it.rate === undefined) it.rate = 8;
+  }else{
+    if(it.unitPrice === null || it.unitPrice === undefined) it.unitPrice = 0;
+  }
+  renderRows();
+  saveDraft();
+});
+
+rowsEl.addEventListener('click', e=>{
+  const more = e.target.closest('[data-more]');
+  if(more){
+    const row = more.closest('.row');
+    e.stopPropagation();          // 阻止冒泡到 document，否则菜单刚插上就被全局点击关掉
+    openMoreMenu(row, more);
+    return;
+  }
+  const act = e.target.closest('[data-act]');
+  if(act){
+    if(act.dataset.act === 'add') addItem();
+    if(act.dataset.act === 'tpl-t1') loadTemplate('t1');
+  }
+});
+
+/* 行内更多菜单 */
+let menuEl = null;
+function closeMenu(){
+  if(menuEl){ menuEl.remove(); menuEl = null; }
+}
+function openMoreMenu(row, anchor){
+  closeMenu();
+  const it = state.items.find(i=>i.id === row.dataset.id);
+  if(!it) return;
+  const idx = state.items.indexOf(it);
+  const m = document.createElement('div');
+  m.className = 'dd open';
+  m.style.position = 'fixed';
+  const rect = anchor.getBoundingClientRect();
+  m.style.left = (rect.left - 150) + 'px';
+  m.style.top = (rect.bottom + 4) + 'px';
+  m.style.minWidth = '160px';
+  m.innerHTML =
+    '<div class="it" data-m="toggle">'+(it.enabled?'停用':'启用')+'<span class="k">'+(it.enabled?'不计数':'计入')+'</span></div>'+
+    '<div class="it" data-m="up">上移</div>'+
+    '<div class="it" data-m="down">下移</div>'+
+    '<div class="it" data-m="copy">复制一项</div>'+
+    '<div class="sep"></div>'+
+    '<div class="it" data-m="del" style="color:#B4402C">删除</div>';
+  document.body.appendChild(m);
+  menuEl = m;
+
+  m.addEventListener('click', ev=>{
+    const d = ev.target.closest('[data-m]');
+    if(!d || !d.dataset.m) return;
+    const a = d.dataset.m;
+    closeMenu();
+    if(a === 'toggle'){
+      it.enabled = !it.enabled;
+      renderRows(); saveDraft();
+    }else if(a === 'up' && idx > 0){
+      state.items.splice(idx-1, 0, state.items.splice(idx,1)[0]);
+      renderRows(); saveDraft();
+    }else if(a === 'down' && idx < state.items.length-1){
+      state.items.splice(idx+1, 0, state.items.splice(idx,1)[0]);
+      renderRows(); saveDraft();
+    }else if(a === 'copy'){
+      const c = JSON.parse(JSON.stringify(it));
+      c.id = uid(); c.name = it.name + ' 副本';
+      state.items.splice(idx+1, 0, c);
+      renderRows(); saveDraft();
+    }else if(a === 'del'){
+      const backup = JSON.parse(JSON.stringify(state));
+      const name = it.name || '未命名科目';
+      state.items.splice(idx,1);
+      renderRows(); saveDraft();
+      showToast('已删除「'+name+'」', ()=>{
+        state = backup; renderRows(); saveDraft();
+      });
+    }
+  });
+
+  setTimeout(()=>{
+    document.addEventListener('click', function once(ev){
+      if(menuEl && !menuEl.contains(ev.target)){ closeMenu(); }
+      document.removeEventListener('click', once);
+    });
+  }, 0);
+}
+
+/* ======================= 新增科目 ======================= */
+function addItem(){
+  const last = state.items[state.items.length-1];
+  const it = {
+    id: uid(),
+    name: '新科目',
+    group: last ? last.group : 'other',
+    mode: 'perCapita',
+    unitPrice: 0,
+    qty: null,
+    rate: null,
+    enabled: true
+  };
+  state.items.push(it);
+  renderRows(); saveDraft();
+  const row = rowsEl.querySelector('.row[data-id="'+it.id+'"]');
+  if(row){
+    const inp = row.querySelector('[data-f="name"]');
+    inp.focus(); inp.select();
+    row.scrollIntoView({block:'nearest'});
+  }
+}
+
+// 「添加科目」位于 tfoot，不在表格的委托范围内，需单独绑定
+el('addBtn').addEventListener('click', addItem);
+
+/* ======================= 顶栏交互 ======================= */
+const evName = el('evName'), evDate = el('evDate'), evNum = el('evNum');
+
+evName.addEventListener('input', ()=>{ state.name = evName.value; saveDraft(); });
+evName.addEventListener('blur', ()=>{ if(!evName.value.trim()){ state.name='未命名活动'; evName.value = state.name; } });
+
+evDate.addEventListener('change', ()=>{ state.date = evDate.value; saveDraft(); });
+
+function setHeadcount(n, silent){
+  n = clamp(Math.round(n), 1, 9999);
+  state.headcount = n;
+  evNum.value = n;
+  el('stepDown').disabled = n <= 1;
+  el('stepUp').disabled = n >= 9999;
+  paintNumbers();
+  if(!silent) saveDraft();
+}
+
+evNum.addEventListener('input', ()=>{
+  const v = num(evNum.value);
+  if(evNum.value === '') return;
+  setHeadcount(v);
+});
+evNum.addEventListener('blur', ()=>{ evNum.value = state.headcount; });
+evNum.addEventListener('keydown', e=>{
+  if(e.key === 'ArrowUp'){ e.preventDefault(); setHeadcount(state.headcount + (e.shiftKey?10:1)); evNum.value = state.headcount; }
+  if(e.key === 'ArrowDown'){ e.preventDefault(); setHeadcount(state.headcount - (e.shiftKey?10:1)); evNum.value = state.headcount; }
+});
+
+el('stepUp').addEventListener('click', e=>{
+  setHeadcount(state.headcount + (e.shiftKey?10:1));
+  evNum.value = state.headcount;
+});
+el('stepDown').addEventListener('click', e=>{
+  setHeadcount(state.headcount - (e.shiftKey?10:1));
+  evNum.value = state.headcount;
+});
+
+/* ======================= 模板与方案下拉 ======================= */
+const tplDD = el('tplDD'), snapDD = el('snapDD');
+
+function buildTplDD(){
+  tplDD.innerHTML = '<div class="lbl">场景模板</div>' +
+    Object.keys(TEMPLATES).map(k=>
+      '<div class="it" data-tpl="'+k+'">'+TEMPLATES[k].name+'<span class="k">'+(TEMPLATES[k].headcount)+' 人</span></div>'
+    ).join('');
+}
+
+el('tplBtn').addEventListener('click', e=>{
+  e.stopPropagation();
+  closeDD();
+  buildTplDD();
+  tplDD.classList.toggle('open');
+});
+tplDD.addEventListener('click', e=>{
+  const d = e.target.closest('[data-tpl]');
+  if(!d) return;
+  closeDD();
+  loadTemplate(d.dataset.tpl);
+});
+
+function loadTemplate(key){
+  const t = TEMPLATES[key];
+  if(state.items.length > 0){
+    const backup = JSON.parse(JSON.stringify(state));
+    doLoad();
+    showToast('已切换为「'+t.name+'」模板，单价为参考值', ()=>{
+      state = backup; renderAll(); saveDraft();
+    });
+  }else{
+    doLoad();
+    showToast('已切换为「'+t.name+'」模板，单价为参考值');
+  }
+  function doLoad(){
+    state.items = fromTemplate(key);
+    state.headcount = t.headcount;
+    // 预算上限保留用户已填值
+    evNum.value = t.headcount;
+    el('stepDown').disabled = t.headcount <= 1;
+    el('stepUp').disabled = t.headcount >= 9999;
+    renderAll();
+    saveDraft();
+  }
+}
+
+function closeDD(){ tplDD.classList.remove('open'); snapDD.classList.remove('open'); }
+document.addEventListener('click', ()=>{ closeDD(); closeMenu(); });
+
+/* 方案快照 */
+function getSnaps(){
+  try{ return JSON.parse(localStorage.getItem(KEY_SNAP) || '[]'); }catch(e){ return []; }
+}
+function setSnaps(arr){
+  try{ localStorage.setItem(KEY_SNAP, JSON.stringify(arr.slice(0,3))); }catch(e){}
+}
+function buildSnapDD(){
+  const snaps = getSnaps();
+  let html = '<div class="lbl">方案快照</div>';
+  for(let i=0;i<3;i++){
+    const s = snaps[i];
+    if(s){
+      const d = new Date(s.at);
+      html += '<div class="it" data-restore="'+i+'">'+esc(s.label)+
+              '<span class="k">'+s.headcount+' 人</span></div>';
+    }else{
+      html += '<div class="it" style="color:#B5AFA4;cursor:default">空位 '+String.fromCharCode(65+i)+'</div>';
+    }
+  }
+  html += '<div class="sep"></div><div class="it" data-save="1">保存当前为快照</div>';
+  snapDD.innerHTML = html;
+}
+el('snapBtn').addEventListener('click', e=>{
+  e.stopPropagation();
+  closeDD();
+  buildSnapDD();
+  snapDD.classList.toggle('open');
+});
+snapDD.addEventListener('click', e=>{
+  const sv = e.target.closest('[data-save]');
+  const rs = e.target.closest('[data-restore]');
+  if(sv){
+    closeDD();
+    const snaps = getSnaps();
+    const slot = snaps.length < 3 ? snaps.length : 2;
+    const label = (state.name || '未命名') + ' · ' + String.fromCharCode(65+slot);
+    snaps[slot] = {label, at:Date.now(), headcount:state.headcount, data:JSON.parse(JSON.stringify(state))};
+    setSnaps(snaps);
+    showToast('已保存为快照 ' + String.fromCharCode(65+slot));
+  }
+  if(rs){
+    closeDD();
+    const snaps = getSnaps();
+    const s = snaps[+rs.dataset.restore];
+    if(!s) return;
+    const backup = JSON.parse(JSON.stringify(state));
+    state = JSON.parse(JSON.stringify(s.data));
+    renderAll(); saveDraft();
+    showToast('已恢复快照「'+s.label+'」', ()=>{ state = backup; renderAll(); saveDraft(); });
+  }
+});
+
+/* ======================= 预算输入 ======================= */
+const bInp = el('budgetInput');
+bInp.addEventListener('input', ()=>{
+  const v = Math.max(0, num(bInp.value));
+  if(state.budget.mode === 'perCapita'){
+    state.budget.perCapita = v;
+    state.budget.total = Math.round(v * state.headcount);
+  }else{
+    state.budget.total = v;
+    state.budget.perCapita = state.headcount > 0 ? Math.round(v*100/state.headcount)/100 : null;
+  }
+  paintNumbers();
+  saveDraft();
+});
+bInp.addEventListener('focus', syncBudgetInput);
+bInp.addEventListener('blur', ()=>{
+  if(state.budget.mode === 'perCapita'){
+    state.budget.perCapita = Math.max(0, num(bInp.value));
+    state.budget.total = Math.round(state.budget.perCapita * state.headcount);
+  }
+  syncBudgetInput();
+});
+
+document.querySelectorAll('.seg button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    const m = b.dataset.bm;
+    if(state.budget.mode === m) return;
+    const cur = budgetValue();          // 必须在改 mode 之前取，否则会拿到新模式下的空值
+    state.budget.mode = m;
+    if(m === 'perCapita'){
+      state.budget.perCapita = state.headcount > 0 ? Math.round(cur*100/state.headcount)/100 : 0;
+      state.budget.total = cur;
+    }else{
+      state.budget.total = (state.budget.perCapita && state.headcount > 0)
+        ? Math.round(state.budget.perCapita * state.headcount)
+        : cur;
+    }
+    document.querySelectorAll('.seg button').forEach(x=> x.classList.toggle('on', x.dataset.bm === m));
+    syncBudgetInput();
+    paintNumbers(); saveDraft();
+  });
+});
+
+/** 按当前模式把预算值写回输入框（人均模式显示人均，总额模式显示总额） */
+function syncBudgetInput(){
+  const B = budgetValue();
+  if(!B){ bInp.value = ''; return; }
+  bInp.value = state.budget.mode === 'perCapita' ? fmt(state.budget.perCapita) : fmt0(B);
+}
+
+/* ======================= 建议应用 ======================= */
+el('sugList').addEventListener('click', e=>{
+  const b = e.target.closest('[data-ap]');
+  if(!b) return;
+  const sugs = JSON.parse(el('sugList').dataset.cache || '[]');
+  const s = sugs[+b.dataset.ap];
+  if(!s) return;
+
+  const backup = JSON.parse(JSON.stringify(state));
+  const it = state.items.find(i=>i.id === s.id);
+
+  if((s.kind === 'price' || s.kind === 'price2') && it){
+    it.unitPrice = Math.max(0, it.unitPrice - s.delta);
+  }else if(s.kind === 'qty' && it){
+    it.qty = Math.max(0, (it.qty||0) - s.delta);
+  }else if(s.kind === 'off' && it){
+    it.enabled = false;
+  }else if(s.kind === 'head'){
+    setHeadcount(state.headcount - s.delta, true);
+  }
+
+  renderRows(); saveDraft();
+
+  const card = el('vCard');
+  card.classList.add('flash');
+  setTimeout(()=>card.classList.remove('flash'), 600);
+
+  showToast('已应用：' + s.label, ()=>{
+    state = backup;
+    evNum.value = state.headcount;
+    renderAll(); saveDraft();
+  }, 10000);
+});
+
+/* ======================= 导出 ======================= */
+function plainText(){
+  const r = compute();
+  const N = r.N, B = r.B;
+  const lines = [];
+  lines.push('活动：' + (state.name||'未命名活动') + (state.date ? '　日期：' + state.date : ''));
+  let head = '人数：' + N + '　预算上限：' + (B>0 ? fmt0(B)+' 元' : '未设置');
+  if(B>0){
+    head += '　合计：' + fmt0(r.total) + ' 元　差额：' + (r.variance>=0?'+':'-') + fmt0(Math.abs(r.variance)) + ' 元（' + (r.variance>=0?'结余':'超支') + '）';
+  }else{
+    head += '　合计：' + fmt0(r.total) + ' 元';
+  }
+  lines.push(head);
+  if(r.perCap !== null){
+    lines.push('人均：' + fmt(r.perCap) + ' 元' + (B>0?'（预算人均 ' + fmt(Math.round(B*100/N)/100) + ' 元）':''));
+  }
+  lines.push('—— 明细 ——');
+  state.items.forEach((it,i)=>{
+    if(!it.enabled) return;
+    if(it.name === '新科目' && !(r.subs[it.id]||0)) return;
+    const idx = String(i+1) + '. ';
+    let unit = '';
+    if(it.mode === 'perCapita') unit = fmt0(it.unitPrice) + '×' + N;
+    else if(it.mode === 'lump') unit = '一次性';
+    else if(it.mode === 'quantity') unit = fmt0(it.unitPrice) + '×' + it.qty;
+    else unit = (it.rate||0) + '%×' + fmt0(r.base);
+    lines.push(idx + it.name + '　' + unit + '　' + fmt0(r.subs[it.id]||0) + ' 元');
+  });
+  const off = state.items.filter(i=>!i.enabled);
+  if(off.length){
+    lines.push('（未计入：' + off.map(i=>i.name).join('、') + '）');
+  }
+  return lines.join('\n');
+}
+
+el('copyBtn').addEventListener('click', async ()=>{
+  const text = plainText();
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast('明细已复制，可直接粘贴到微信或邮件');
+  }catch(err){
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;left:-9999px;top:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand('copy'); showToast('明细已复制'); }
+    catch(e2){ showToast('复制失败，请手动选择文本'); }
+    ta.remove();
+  }
+});
+
+el('printBtn').addEventListener('click', ()=> window.print());
+
+/* ======================= 清空 ======================= */
+el('resetBtn').addEventListener('click', ()=>{
+  if(!state.items.length){ return; }
+  if(!confirm('将清空当前所有科目与预算，且不可撤销。确定继续？')) return;
+  const backup = JSON.parse(JSON.stringify(state));
+  state = blankState();
+  renderAll(); saveDraft();
+  showToast('已清空', ()=>{ state = backup; renderAll(); saveDraft(); }, 8000);
+});
+
+/* ======================= toast ======================= */
+let toastTimer = null, undoFn = null;
+function showToast(msg, undo, ms){
+  const t = el('toast');
+  el('toastMsg').textContent = msg;
+  const u = el('toastUndo');
+  if(undo){
+    undoFn = undo;
+    u.style.display = '';
+  }else{
+    undoFn = null;
+    u.style.display = 'none';
+  }
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{
+    t.classList.remove('show');
+    undoFn = null;
+  }, ms || 5000);
+}
+el('toastUndo').addEventListener('click', ()=>{
+  if(undoFn){
+    undoFn();
+    undoFn = null;
+    el('toast').classList.remove('show');
+    clearTimeout(toastTimer);
+  }
+});
+
+/* ======================= 草稿 ======================= */
+let saveTimer = null;
+function saveDraft(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    try{ localStorage.setItem(KEY_DRAFT, JSON.stringify(state)); }catch(e){}
+  }, 400);
+}
+function loadDraft(){
+  try{
+    const raw = localStorage.getItem(KEY_DRAFT);
+    if(!raw) return null;
+    const d = JSON.parse(raw);
+    if(!d || !Array.isArray(d.items)) return null;
+    if(!d.budget) d.budget = {mode:'total', total:0, perCapita:null};
+    return d;
+  }catch(e){ return null; }
+}
+
+/* ======================= 全量渲染 ======================= */
+function renderAll(){
+  evName.value = state.name || '未命名活动';
+  evDate.value = state.date || '';
+  evNum.value = state.headcount;
+  el('stepDown').disabled = state.headcount <= 1;
+  el('stepUp').disabled = state.headcount >= 9999;
+
+  const bm = state.budget.mode || 'total';
+  document.querySelectorAll('.seg button').forEach(x=> x.classList.toggle('on', x.dataset.bm === bm));
+  syncBudgetInput();
+
+  renderRows();
+  const r = compute();
+  el('rowHint').textContent = state.items.length ? (state.items.length + ' 个科目，计入 ' + state.items.filter(i=>i.enabled).length + ' 个') : '';
+}
+
+/* ======================= 启动 ======================= */
+function boot(){
+  const draft = loadDraft();
+  if(draft){
+    state = draft;
+    renderAll();
+    const d = new Date();
+    showToast('已恢复上次编辑');
+  }else{
+    state = blankState();
+    state.items = fromTemplate('t1');
+    state.headcount = 30;
+    renderAll();
+    showToast('已切换到「部门团建」模板 · 单价为参考值', null, 3600);
+  }
+}
+
+document.addEventListener('keydown', e=>{
+  if((e.metaKey||e.ctrlKey) && e.key === 'p'){ e.preventDefault(); window.print(); }
+});
+
+/* 打印前根据数据状态决定隐藏哪些空壳 */
+window.addEventListener('beforeprint', ()=>{
+  if(!state) return;
+  document.body.classList.toggle('no-date', !state.date);
+  document.body.classList.toggle('no-budget', budgetValue() <= 0);
+});
+
+/* 窗口尺寸变化时只补空行，不重建表格（避免打断正在输入的内容） */
+let rzTimer = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(rzTimer);
+  rzTimer = setTimeout(()=>{
+    fillGhosts();
+  }, 180);
+});
+
+boot();
+
+})();
+</script>
+</body>
+</html>
